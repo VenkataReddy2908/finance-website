@@ -1,0 +1,1767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Finance Tracker by Day</title>
+<style>
+  :root{
+    --bg:#0f172a;
+    --panel:#111827;
+    --card:#1f2937;
+    --muted:#94a3b8;
+    --text:#e5e7eb;
+    --accent:#22c55e;
+    --accent-2:#60a5fa;
+    --danger:#ef4444;
+    --warn:#f59e0b;
+    --ring:#22c55e55;
+    --radius:16px;
+    --shadow: 0 10px 25px rgba(0,0,0,.35);
+    --edit-form-bg: #1a2539;
+    --edit-form-border: #2d3748;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:linear-gradient(180deg,#0b1225, #0f172a 30%);}
+  body{color:var(--text);font-family:system-ui,Segoe UI,Roboto,Inter,Arial,sans-serif;line-height:1.45}
+  .wrap{max-width:100%;margin:0;padding:0;display:flex;gap:0;}
+  .main-content{flex:1;padding:16px;}
+  .sidebar{width:320px;flex-shrink:0;padding:16px;background:linear-gradient(180deg,#0b1225, #0f172a 30%);}
+  header{
+    display:flex;align-items:center;gap:12px;justify-content:space-between;margin-bottom:18px;padding:0;
+}
+  .title{font-weight:800;letter-spacing:.2px;font-size:clamp(20px,4vw,28px)}
+  .sub{color:var(--muted);font-size:14px}
+  .weekly-summary {
+    background: linear-gradient(135deg, #0e152b, #0a1020);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 24px;
+    border: 1px solid #1b2550;
+    box-shadow: var(--shadow);
+    animation: slideDown 0.5s ease-out;
+  }
+  .weekly-summary h3 {
+    margin-top: 0;
+    margin-bottom: 16px;
+    color: #c7d2fe;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .weekly-summary h3 svg {
+    width: 24px;
+    height: 24px;
+  }
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 640px) {
+    .summary-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  .summary-item {
+    background: radial-gradient(120% 120% at 0% 0%, #0a1e36, #14213c 50%);
+    border: 1px solid #1f2a44;
+    border-radius: 14px;
+    padding: 16px;
+    text-align: center;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .summary-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+  }
+  .summary-item .label {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
+  .summary-item .value {
+    font-size: 20px;
+    font-weight: 800;
+  }
+  .summary-item .value.total-amount {
+    color: #60a5fa;
+  }
+  .summary-item .value.given-amount {
+    color: #f59e0b;
+  }
+  .summary-item .value.balance-amount {
+    color: #22c55e;
+  }
+  .summary-item .value.balance-negative {
+    color: #ef4444;
+  }
+  .summary-item .value.persons-count {
+    color: #c084fc;
+  }
+  .summary-item .value.principal-amount {
+    color: #8b5cf6;
+  }
+  .summary-item .value.interest-amount {
+    color: #ec4899;
+  }
+  .days{
+    display:grid;grid-template-columns:repeat(7,1fr);gap:12px;margin:0; /* Removed the 16px left/right margin */
+    padding: 0 16px; /* Add padding instead to maintain spacing from edges */
+}
+  @media (max-width:1200px){ 
+    .wrap { flex-direction: column; }
+    .sidebar { width: 100%; }
+    .days{grid-template-columns:repeat(4,1fr)} 
+  }
+  @media (max-width:980px){ .days{grid-template-columns:repeat(4,1fr)} }
+  @media (max-width:640px){ .days{grid-template-columns:repeat(2,1fr)} }
+  .day-card{
+    background:radial-gradient(120% 120% at 100% 0%,#0b2135 0%, var(--card) 40%);
+    border-radius:var(--radius);padding:14px;box-shadow:var(--shadow);border:1px solid #1f2a44;
+    position:relative;overflow:hidden;display:flex;flex-direction:column;gap:10px;min-height:120px;
+    transition: all 0.3s ease;
+    animation: fadeIn 0.5s ease-out;
+  }
+  .day-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.4);
+  }
+  .day-name{font-weight:700;font-size:14px;letter-spacing:.4px;text-transform:uppercase;color:#c7d2fe}
+  .count-btn{
+    align-self:flex-start;border:none;border-radius:999px;padding:8px 12px;background:#0b1225;color:#d1fae5;
+    font-weight:700;box-shadow:inset 0 0 0 2px #134e4a;cursor:pointer;transition:transform .08s ease, box-shadow .2s;
+  }
+  .count-btn:hover{box-shadow:inset 0 0 0 2px var(--accent), 0 0 0 4px var(--ring); transform: scale(1.05);}
+  .count{font-size:22px;margin-left:6px;color:#34d399}
+  .open-btn{
+    margin-top:auto;align-self:flex-end;background:linear-gradient(135deg,#22c55e,#16a34a);
+    border:none;color:white;padding:8px 12px;border-radius:12px;font-weight:700;cursor:pointer;
+    transition: all 0.2s ease;
+  }
+  .open-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(34, 197, 94, 0.3);
+  }
+  .panel{
+    margin:20px 0; /* Removed the 16px left/right margin */
+    padding: 16px 14px 22px;
+    background:linear-gradient(180deg,#0e152b, #0a1020 45%, #0e152b);
+    border:1px solid #1b2550;border-radius:20px;box-shadow:var(--shadow);
+    animation: slideDown 0.4s ease-out;
+}
+  .panel-head{
+    display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:14px
+  }
+  .badges{display:flex;gap:8px;flex-wrap:wrap}
+  .badge{
+    background:#0b1225;border:1px solid #1f2a44;color:#e5e7eb;border-radius:999px;padding:6px 10px;font-size:13px;
+    animation: pulse 2s infinite;
+  }
+  .metrics{display:flex;gap:10px;flex-wrap:wrap}
+  @media (max-width: 640px) {
+    .metrics {
+      flex-direction: column;
+      width: 100%;
+    }
+    .metric {
+      width: 100%;
+    }
+  }
+  .metric{
+    background:radial-gradient(120% 120% at 0% 0%,#0a1e36, #14213c 50%);
+    border:1px solid #1f2a44;border-radius:14px;padding:10px 12px;min-width:160px;
+    transition: all 0.3s ease;
+  }
+  .metric:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+  }
+  .metric .label{color:var(--muted);font-size:12px}
+  .metric .value{font-size:18px;font-weight:800;margin-top:4px}
+  .metric .value.balance-negative {
+    color: #ef4444;
+  }
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+  .input{
+    background:#0b1225;border:1px solid #1f2a44;color:var(--text);padding:10px 12px;border-radius:12px;outline:none;
+    transition: all 0.3s ease;
+  }
+  .input:focus{box-shadow:0 0 0 3px var(--ring);border-color:#1e3a8a; transform: scale(1.02);}
+  .btn{
+    background:linear-gradient(135deg,#60a5fa,#3b82f6);border:none;color:white;padding:10px 14px;border-radius:12px;
+    font-weight:800;cursor:pointer;transition: all 0.2s ease;
+  }
+  .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4);
+  }
+  .btn.secondary{background:#0b1225;color:#cbd5e1;border:1px solid #1f2a44}
+  .btn.secondary:hover {
+    box-shadow: 0 5px 15px rgba(148, 163, 184, 0.2);
+  }
+  .btn.danger{background:linear-gradient(135deg,#ef4444,#b91c1c)}
+  .btn.danger:hover {
+    box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3);
+  }
+  .btn:disabled{opacity:.6;cursor:not-allowed}
+  .card{
+    background:var(--edit-form-bg);
+    border:1px solid var(--edit-form-border);border-radius:16px;padding:20px;margin-top:12px;
+    animation: slideUp 0.4s ease-out;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+  }
+  .edit-mode .card {
+    background: linear-gradient(135deg, #1a2539, #15202b);
+    border: 1px solid #3b82f6;
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+  }
+  .grid{
+    display:grid;gap:12px;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
+  }
+  @media (max-width:980px){ .grid{grid-template-columns:repeat(3,1fr)} }
+  @media (max-width:640px){ .grid{grid-template-columns:repeat(2,1fr)} }
+  label{font-size:12px;color:var(--muted);margin-bottom:4px;}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .table{
+    width:100%;border-collapse:collapse;margin-top:12px;background:#0b1225;border-radius:12px;overflow:hidden;
+    animation: fadeIn 0.6s ease-out;
+  }
+  .table th,.table td{padding:12px;border-bottom:1px solid #1f2a44;text-align:left;font-size:14px}
+  .table th{background:#0f1a38;color:#c7d2fe;font-weight:700}
+  .table tr{transition: all 0.2s ease;}
+  .table tr:hover td{background:#0f172a; transform: scale(1.01);}
+  .right{text-align:right}
+  .balance-negative {
+    color: #ef4444;
+    font-weight: bold;
+  }
+  .payments{
+    margin-top:18px;display:grid;grid-template-columns:1fr;gap:8px;
+    animation: fadeIn 0.7s ease-out;
+  }
+  .hint{color:var(--muted);font-size:12px}
+  .empty{
+    text-align:center;color:var(--muted);padding:20px;border:1px dashed #1f2a44;border-radius:12px;margin-top:10px
+  }
+  .import-export {
+    display: flex;
+    gap: 10px;
+    margin-left: auto;
+  }
+  #importFile {
+    display: none;
+  }
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.3s ease-out;
+  }
+  .modal-content {
+  background: var(--panel);
+  border-radius: var(--radius);
+  padding: 24px;
+  max-width: 90%;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  text-align: center;
+  box-shadow: var(--shadow);
+  border: 1px solid #1f2a44;
+  animation: scaleIn 0.3s ease-out;
+}
+  .modal-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 20px;
+  }
+  .person-details {
+    text-align: left;
+    margin: 15px 0;
+  }
+  .person-details h4 {
+    margin: 15px 0 8px 0;
+    color: #c7d2fe;
+    border-bottom: 1px solid #1f2a44;
+    padding-bottom: 5px;
+  }
+  .detail-row {
+  display: flex;
+  margin-bottom: 8px;
+  animation: fadeIn 0.5s ease-out;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .person-details {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  
+  .detail-row {
+    flex-direction: column;
+    margin-bottom: 0;
+  }
+  
+  .detail-label {
+    min-width: auto;
+    margin-bottom: 4px;
+  }
+}
+  .detail-label {
+    font-weight: 600;
+    color: var(--muted);
+    min-width: 120px;
+  }
+  .detail-value {
+    flex: 1;
+  }
+  .payment-list {
+    margin-top: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #1f2a44;
+    border-radius: 8px;
+    padding: 10px;
+    background: #0b1225;
+  }
+  .payment-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px;
+    border-bottom: 1px solid #1f2a44;
+    transition: all 0.2s ease;
+  }
+  .payment-item:hover {
+    background: #0f172a;
+  }
+  .payment-item:last-child {
+    border-bottom: none;
+  }
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .btn.small {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  .btn.info {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  }
+  .btn.info:hover {
+    box-shadow: 0 5px 15px rgba(139, 92, 246, 0.3);
+  }
+  .payment-modal-content {
+    max-width: 400px;
+  }
+  .payment-form {
+    text-align: left;
+    margin: 20px 0;
+  }
+  .payment-field {
+    margin-bottom: 16px;
+  }
+  .payment-field label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .payment-field input {
+    width: 100%;
+    padding: 10px 12px;
+    background: #0b1225;
+    border: 1px solid #1f2a44;
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 14px;
+  }
+  .payment-field input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+  }
+  .error-message {
+    color: #ef4444;
+    font-size: 12px;
+    margin-top: 4px;
+    display: none;
+  }
+  .edit-payment-modal-content {
+    max-width: 800px;
+  }
+  .edit-payment-list {
+    max-height: 300px;
+    overflow-y: auto;
+    margin: 15px 0;
+    border: 1px solid #1f2a44;
+    border-radius: 8px;
+    padding: 10px;
+    background: #0b1225;
+  }
+  .edit-payment-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #1f2a44;
+    transition: all 0.2s ease;
+  }
+  .edit-payment-item:hover {
+    background: #0f172a;
+  }
+  .edit-payment-item:last-child {
+    border-bottom: none;
+  }
+  .payment-actions {
+    display: flex;
+    gap: 8px;
+  }
+  .btn.tiny {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+  .date-link {
+    color: #60a5fa;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  .date-link:hover {
+    color: #3b82f6;
+  }
+  .date-button {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    border: none;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin: 2px;
+  }
+  .date-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(139, 92, 246, 0.3);
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slideDown {
+    from { 
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to { 
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes slideUp {
+    from { 
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to { 
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes scaleIn {
+    from { 
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    to { 
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+  }
+  .field input:focus {
+    animation: inputFocus 0.5s ease-out;
+  }
+  @keyframes inputFocus {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+  }
+  .edit-mode-indicator {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: pulse 2s infinite;
+  }
+  .edit-mode-indicator svg {
+    width: 18px;
+    height: 18px;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="main-content">
+      <header>
+        <div>
+          <div class="title">Finance Website – Daily Ledger</div>
+        </div>
+        <div class="import-export">
+          <button id="exportData" class="btn" title="Export all data">Export</button>
+          <button id="importData" class="btn secondary" title="Import data from file">Import</button>
+          <input type="file" id="importFile" accept=".json" />
+          <button id="resetAll" class="btn danger" title="Clear all saved data">Reset All</button>
+        </div>
+      </header>
+
+      <section id="days" class="days"></section>
+
+      <section id="dayPanel" class="panel" style="display:none">
+        <div class="panel-head">
+          <div class="badges">
+            <span id="panelDay" class="badge"></span>
+            <span class="badge">Tip: Use S.No or Name search</span>
+          </div>
+          <div class="metrics">
+            <div class="metric">
+              <div class="label">Persons</div>
+              <div id="mPersons" class="value">0</div>
+            </div>
+            <div class="metric">
+              <div class="label">మొత్తం డబ్బు</div>
+              <div id="mTotal" class="value">₹0</div>
+            </div>
+            <div class="metric">
+              <div class="label">అసలు</div>
+              <div id="mPrincipal" class="value">₹0</div>
+            </div>
+            <div class="metric">
+              <div class="label">వడ్డీలు</div>
+              <div id="mInterest" class="value">₹0</div>
+            </div>
+            <div class="metric">
+              <div class="label">కట్టింధి</div>
+              <div id="mGiven" class="value">₹0</div>
+            </div>
+            <div class="metric">
+              <div class="label">బ్యాలెన్స్</div>
+              <div id="mBalance" class="value">₹0</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <input id="searchSno" class="input" style="min-width:140px" placeholder="Search S.No" />
+          <input id="searchName" class="input" style="min-width:180px" placeholder="Search Name" />
+          <button id="btnSearchClear" class="btn secondary">Clear</button>
+          <span class="hint">After you click a day's button above, use search here.</span>
+          <div style="flex:1"></div>
+          <button id="btnAdd" class="btn">+ Add</button>
+        </div>
+
+        <div id="addForm" class="card" style="display:none">
+          <div id="editModeIndicator" class="edit-mode-indicator" style="display: none;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+            Editing Existing Person
+          </div>
+          <div class="grid">
+            <div class="field"><label>S.No</label><input id="fSno" class="input" placeholder="e.g. 1" /></div>
+            <div class="field"><label>పేరు</label><input id="fName" class="input" placeholder="Full name" /></div>
+            <div class="field"><label>ఊరు</label><input id="fVillage" class="input" placeholder="Village" /></div>
+            <div class="field"><label>తేధి(DD-MM-YYYY)</label><input id="fDate" class="input" placeholder="e.g. 15-01-2023" /></div>
+            <div class="field"><label>అసలు</label><input id="fPrincipal" class="input" type="number" step="0.01" placeholder="0" /></div>
+            <div class="field"><label>వడ్డీలు</label><input id="fInterest" class="input" type="number" step="0.01" placeholder="0" /></div>
+            <div class="field"><label>మొత్తం</label><input id="fTotal" class="input" type="number" step="0.01" placeholder="0" readonly /></div>
+            <div class="field"><label>కట్టింధి</label><input id="fGiven" class="input" type="number" step="0.01" placeholder="0" value="0" /></div>
+            <div class="field"><label>బ్యాలెన్స్</label><input id="fBalance" class="input" type="number" step="0.01" placeholder="0" readonly /></div>
+          </div>
+          <div style="margin-top:16px;display:flex;gap:10px;justify-content:flex-end">
+            <button id="btnSave" class="btn">Save</button>
+            <button id="btnCancel" class="btn secondary">Cancel</button>
+  </div>
+          <div class="hint" style="margin-top:10px">Principal + Interest = Total Amount. Balance is calculated automatically.</div>
+        </div>
+
+        <table class="table" id="resultsTable">
+          <thead>
+          <tr>
+            <th>S.No</th><th>పేరు</th><th>ఊరు</th><th>తేధి</th>
+            <th class="right">అసలు</th><th class="right">వడ్డీలు</th><th class="right">మొత్తం</th><th class="right">కట్టింధి</th><th class="right">బ్యాలెన్స్</th><th>Actions</th>
+          </tr>
+          </thead>
+          <tbody id="resultsBody"><tr><td colspan="10" class="empty">No records yet.</td></tr></tbody>
+        </table>
+
+        <div class="payments">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div style="font-weight:800">Payments of this Day (Grouped by Date)</div>
+            <div class="hint">Click on a date to see details</div>
+          </div>
+          <table class="table" id="paymentsTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th class="right">Persons Paid</th>
+                <th class="right">Total Given on Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="paymentsBody"><tr><td colspan="4" class="empty">No payments yet.</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <div class="sidebar">
+      <section id="weeklySummary" class="weekly-summary">
+        <h3>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+          Weekly Summary
+        </h3>
+        <div class="summary-grid">
+          <div class="summary-item">
+            <div class="label">Total Persons</div>
+            <div id="weeklyPersons" class="value persons-count">0</div>
+          </div>
+          <div class="summary-item">
+            <div class="label">మొత్తం</div>
+            <div id="weeklyTotal" class="value total-amount">₹0</div>
+          </div>
+          <div class="summary-item">
+            <div class="label">అసలు</div>
+            <div id="weeklyPrincipal" class="value principal-amount">₹0</div>
+          </div>
+          <div class="summary-item">
+            <div class="label">వడ్డీలు</div>
+            <div id="weeklyInterest" class="value interest-amount">₹0</div>
+          </div>
+          <div class="summary-item">
+            <div class="label">కట్టింధి</div>
+            <div id="weeklyGiven" class="value given-amount">₹0</div>
+          </div>
+          <div class="summary-item">
+            <div class="label">బ్యాలెన్స్</div>
+            <div id="weeklyBalance" class="value balance-amount">₹0</div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="importModal" class="modal">
+    <div class="modal-content">
+      <h3>Import Data</h3>
+      <p id="modalMessage">This will replace all current data. Are you sure you want to continue?</p>
+      <div class="modal-buttons">
+        <button id="confirmImport" class="btn">Yes, Import</button>
+        <button id="cancelImport" class="btn secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="personModal" class="modal">
+    <div class="modal-content">
+      <h3>Person Details</h3>
+      <div id="personDetails" class="person-details">
+      </div>
+      <div class="modal-buttons">
+        <button id="closePersonModal" class="btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="paymentModal" class="modal">
+    <div class="modal-content payment-modal-content">
+      <h3>Add Payment</h3>
+      <div class="payment-form">
+        <div class="payment-field">
+          <label for="paymentDate">తేధి(DD-MM-YYYY)</label>
+          <input type="text" id="paymentDate" placeholder="e.g. 15-01-2023" />
+          <div id="dateError" class="error-message">Please enter a valid date in DD-MM-YYYY format</div>
+        </div>
+        <div class="payment-field">
+          <label for="paymentAmount">Amount (₹)</label>
+          <input type="number" id="paymentAmount" step="0.01" placeholder="Enter amount" />
+          <div id="amountError" class="error-message">Please enter a valid amount</div>
+        </div>
+      </div>
+      <div class="modal-buttons">
+        <button id="confirmPayment" class="btn">Add Payment</button>
+        <button id="cancelPayment" class="btn secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="editModal" class="modal">
+    <div class="modal-content edit-payment-modal-content">
+      <h3>Edit Person</h3>
+      <div id="editDetails" class="person-details">
+      </div>
+      <div class="edit-payment-list" id="editPaymentList">
+      </div>
+      <div class="modal-buttons">
+        <button id="closeEditModal" class="btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="dateDetailsModal" class="modal">
+    <div class="modal-content">
+      <h3 id="dateDetailsTitle">Payments on <span id="modalDate"></span></h3>
+      <div class="date-summary">
+        <div class="summary-grid" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 20px;">
+          <div class="summary-item">
+            <div class="label">Total Amount</div>
+            <div id="modalTotalAmount" class="value total-amount">₹0</div>
+          </div>
+          <div class="summary-item">
+            <div class="label">Persons Paid</div>
+            <div id="modalPersonsCount" class="value persons-count">0</div>
+          </div>
+        </div>
+      </div>
+      <div class="person-details">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>S.No</th><th>పేరు</th><th>ఊరు</th><th>తేధి</th>
+              <th class="right">అసలు</th><th class="right">వడ్డీలు</th><th class="right">మొత్తం</th>
+              <th class="right">కట్టింధి</th><th class="right">బ్యాలెన్స్</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="dateDetailsBody">
+          </tbody>
+        </table>
+      </div>
+      <div class="modal-buttons">
+        <button id="closeDateDetailsModal" class="btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const DAY_KEYS = ["sun","mon","tue","wed","thu","fri","sat"];
+const DAY_LABEL = {sun:"ఆదివారం", mon:"సోమవారం", tue:"మంగళవారం", wed:"బుధవారం", thu:"గురువారం", fri:"శుక్రవారం", sat:"శనివారం"};
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
+const storeKey = "financeData.v2";
+
+function blankData(){
+  const days = {};
+  DAY_KEYS.forEach(k => days[k] = {people:[]});
+  return {days};
+}
+
+function loadData(){
+  try{
+    const raw = localStorage.getItem(storeKey);
+    if(!raw) return blankData();
+    const data = JSON.parse(raw);
+    if(!data || !data.days) return blankData();
+    DAY_KEYS.forEach(k => { if(!data.days[k]) data.days[k] = {people:[]} });
+    return data;
+  }catch(e){
+    console.warn("Bad storage, resetting", e);
+    return blankData();
+  }
+}
+
+function saveData(data){
+  localStorage.setItem(storeKey, JSON.stringify(data));
+}
+
+function money(n){
+  const v = Number(n||0);
+  return "₹" + v.toLocaleString(undefined,{maximumFractionDigits:0});
+}
+
+function to2(n){ return Math.round((Number(n||0))*100)/100 }
+
+function formatDateWithMonthName(dateStr) {
+  if (!dateStr) return "";
+  if (dateStr.includes("/")) {
+    const parts = dateStr.split("/");
+    if (parts.length === 3 && parts[1].length > 2) {
+      return dateStr;
+    }
+  }
+  const parts = dateStr.split("-");
+  if (parts.length === 3) {
+    const day = parts[2];
+    const monthIndex = parseInt(parts[1]) - 1;
+    const year = parts[0];
+    if (monthIndex >= 0 && monthIndex < 12) {
+      return `${day}/${MONTH_NAMES[monthIndex]}/${year}`;
+    }
+  }
+  return dateStr;
+}
+function isValidDate(dateStr) {
+  const regex = /^(\d{2})-(\d{2})-(\d{4})$/;
+  if (!regex.test(dateStr)) return false;
+  const parts = dateStr.split('-');
+  const day = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10);
+  const year = parseInt(parts[2], 10);
+  if (month < 1 || month > 12) return false;
+  const monthLength = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (year % 400 === 0 || (year % 100 !== 0 && year % 4 === 0)) {
+    monthLength[1] = 29;
+  }
+  return day > 0 && day <= monthLength[month - 1];
+}
+function parseDateWithMonthName(dateStr) {
+  if (!dateStr) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return dateStr;
+  }
+  if (isValidDate(dateStr)) {
+    const parts = dateStr.split("-");
+    const day = parts[0];
+    const month = parts[1];
+    const year = parts[2];
+    return `${year}-${month}-${day}`;
+  }
+  const parts = dateStr.split("/");
+  if (parts.length === 3) {
+    const day = parts[0];
+    const monthName = parts[1];
+    const year = parts[2];
+    const monthIndex = MONTH_NAMES.findIndex(m => m.toLowerCase() === monthName.toLowerCase());
+    if (monthIndex !== -1) {
+      const month = (monthIndex + 1).toString().padStart(2, '0');
+      return `${year}-${month}-${day.padStart(2, '0')}`;
+    }
+  }
+  
+  return null;
+}
+
+function computeWeeklySummary() {
+  let totalPersons = 0;
+  let totalAmount = 0;
+  let totalPrincipal = 0;
+  let totalInterest = 0;
+  let totalGiven = 0;
+  let totalBalance = 0;
+  
+  DAY_KEYS.forEach(dayKey => {
+    const people = DATA.days[dayKey].people;
+    totalPersons += people.length;
+    people.forEach(person => {
+      totalPrincipal += Number(person.principal || 0);
+      totalInterest += Number(person.interest || 0);
+      totalAmount += Number(person.total || 0);
+      totalGiven += Number(person.given || 0);
+      totalBalance += Number(person.balance || 0);
+    });
+  });
+  
+  return {
+    persons: totalPersons,
+    principal: to2(totalPrincipal),
+    interest: to2(totalInterest),
+    total: to2(totalAmount),
+    given: to2(totalGiven),
+    balance: to2(totalBalance)
+  };
+}
+
+function renderWeeklySummary() {
+  const summary = computeWeeklySummary();
+  document.getElementById("weeklyPersons").textContent = summary.persons;
+  document.getElementById("weeklyTotal").textContent = money(summary.total);
+  document.getElementById("weeklyPrincipal").textContent = money(summary.principal);
+  document.getElementById("weeklyInterest").textContent = money(summary.interest);
+  document.getElementById("weeklyGiven").textContent = money(summary.given);
+  
+  // Update balance with negative styling if needed
+  const weeklyBalanceElem = document.getElementById("weeklyBalance");
+  weeklyBalanceElem.textContent = money(summary.balance);
+  if (summary.balance < 0) {
+    weeklyBalanceElem.className = "value balance-negative";
+  } else {
+    weeklyBalanceElem.className = "value balance-amount";
+  }
+}
+
+function exportData() {
+  const data = localStorage.getItem(storeKey);
+  if (!data) {
+    alert("No data to export.");
+    return;
+  }
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `finance-data-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importData(file) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const importedData = JSON.parse(e.target.result);
+      if (!importedData || !importedData.days) {
+        throw new Error("Invalid file format");
+      }
+      DAY_KEYS.forEach(k => {
+        if (!importedData.days[k]) {
+          throw new Error(`Missing day data: ${k}`);
+        }
+      });
+      window.tempImportedData = importedData;
+      const modal = document.getElementById('importModal');
+      const modalMessage = document.getElementById('modalMessage');
+      modalMessage.textContent = "This will replace all current data. Are you sure you want to continue?";
+      modal.style.display = 'flex';
+    } catch (error) {
+      console.error("Import error:", error);
+      alert("Failed to import data: " + error.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function confirmImport() {
+  if (window.tempImportedData) {
+    localStorage.setItem(storeKey, JSON.stringify(window.tempImportedData));
+    DATA = loadData();
+    if (currentDay) {
+      refreshDay();
+    } else {
+      renderDays();
+    }
+    document.getElementById('importModal').style.display = 'none';
+    alert("Data imported successfully!");
+  }
+}
+
+function cancelImport() {
+  window.tempImportedData = null;
+  document.getElementById('importModal').style.display = 'none';
+}
+
+function showPersonDetails(sno) {
+  const person = DATA.days[currentDay].people.find(p => String(p.sno) === String(sno));
+  if (!person) {
+    alert("Person not found.");
+    return;
+  }
+  const modal = document.getElementById('personModal');
+  const detailsContainer = document.getElementById('personDetails');
+  let paymentsHTML = '';
+  if (person.payments && person.payments.length > 0) {
+    paymentsHTML = '<h4>Payment History</h4><div class="payment-list">';
+    person.payments.forEach(payment => {
+      paymentsHTML += `
+        <div class="payment-item">
+          <span>${formatDateWithMonthName(payment.date)}</span>
+          <span>${money(payment.amount)}</span>
+        </div>
+      `;
+    });
+    paymentsHTML += '</div>';
+  } else {
+    paymentsHTML = '<p>No payment history found.</p>';
+  }
+  
+  // Apply negative styling to balance if needed
+  const balanceClass = person.balance < 0 ? "balance-negative" : "";
+  
+  detailsContainer.innerHTML = `
+    <div class="detail-row">
+      <span class="detail-label">S.No:</span>
+      <span class="detail-value">${escapeHtml(person.sno)}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Name:</span>
+      <span class="detail-value">${escapeHtml(person.name)}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Village:</span>
+      <span class="detail-value">${escapeHtml(person.village || 'N/A')}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Date:</span>
+      <span class="detail-value">${escapeHtml(person.date || 'N/A')}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Principal Amount:</span>
+      <span class="detail-value">${money(person.principal)}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Interest Amount:</span>
+      <span class="detail-value">${money(person.interest)}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Total Amount:</span>
+      <span class="detail-value">${money(person.total)}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Given Amount:</span>
+      <span class="detail-value">${money(person.given)}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Balance:</span>
+      <span class="detail-value ${balanceClass}"><b>${money(person.balance)}</b></span>
+    </div>
+    ${paymentsHTML}
+  `;
+  modal.style.display = 'flex';
+}
+
+let currentPaymentPerson = null;
+
+function showPaymentModal(sno) {
+  const person = DATA.days[currentDay].people.find(p => String(p.sno) === String(sno));
+  if (!person) {
+    alert("Person not found.");
+    return;
+  }
+  currentPaymentPerson = person;
+  const modal = document.getElementById('paymentModal');
+  document.getElementById('paymentDate').value = '';
+  document.getElementById('paymentAmount').value = '';
+  document.getElementById('dateError').style.display = 'none';
+  document.getElementById('amountError').style.display = 'none';
+  modal.style.display = 'flex';
+}
+
+function addPayment() {
+  if (!currentPaymentPerson) return;
+  
+  const dateStr = document.getElementById('paymentDate').value.trim();
+  const amountStr = document.getElementById('paymentAmount').value.trim();
+  let hasError = false;
+  
+  // Reset error messages
+  document.getElementById('dateError').style.display = 'none';
+  document.getElementById('amountError').style.display = 'none';
+  
+  // Validate date
+  if (!dateStr) {
+    document.getElementById('dateError').textContent = 'Please enter a date';
+    document.getElementById('dateError').style.display = 'block';
+    hasError = true;
+  } else if (!isValidDate(dateStr)) {
+    document.getElementById('dateError').textContent = 'Please enter a valid date in DD-MM-YYYY format';
+    document.getElementById('dateError').style.display = 'block';
+    hasError = true;
+  }
+  
+  // Validate amount
+  if (!amountStr) {
+    document.getElementById('amountError').textContent = 'Please enter an amount';
+    document.getElementById('amountError').style.display = 'block';
+    hasError = true;
+  } else {
+    const amount = to2(amountStr);
+    if (!(amount > 0)) {
+      document.getElementById('amountError').textContent = 'Amount must be greater than 0';
+      document.getElementById('amountError').style.display = 'block';
+      hasError = true;
+    }
+  }
+  
+  if (hasError) return;
+  
+  const amount = to2(amountStr);
+  const parsedDate = parseDateWithMonthName(dateStr);
+  
+  if (!parsedDate) {
+    document.getElementById('dateError').textContent = 'Please enter a valid date in DD-MM-YYYY format';
+    document.getElementById('dateError').style.display = 'block';
+    return;
+  }
+  
+  currentPaymentPerson.given = to2((currentPaymentPerson.given || 0) + amount);
+  currentPaymentPerson.balance = to2((currentPaymentPerson.total || 0) - (currentPaymentPerson.given || 0));
+  // Don't set to 0 if negative - allow negative values
+  currentPaymentPerson.payments = currentPaymentPerson.payments || [];
+  currentPaymentPerson.payments.push({date: parsedDate, amount});
+  saveData(DATA);
+  document.getElementById('paymentModal').style.display = 'none';
+  refreshDay();
+}
+
+function editPerson(sno) {
+  const person = DATA.days[currentDay].people.find(p => String(p.sno) === String(sno));
+  if (!person) {
+    alert("Person not found.");
+    return;
+  }
+
+  // Fill the form with existing data
+  document.getElementById("fSno").value = person.sno;
+  document.getElementById("fName").value = person.name;
+  document.getElementById("fVillage").value = person.village || "";
+  document.getElementById("fDate").value = person.date || "";
+  document.getElementById("fPrincipal").value = person.principal;
+  document.getElementById("fInterest").value = person.interest;
+  document.getElementById("fTotal").value = person.total;
+  document.getElementById("fGiven").value = person.given || 0;
+  document.getElementById("fBalance").value = person.balance;
+
+  // Show the form with edit mode styling
+  showAddForm(true, true);
+  
+  // Change the save button to update mode
+  const saveBtn = document.getElementById("btnSave");
+  saveBtn.textContent = "Update";
+  saveBtn.dataset.editMode = "true";
+  saveBtn.dataset.originalSno = sno;
+}
+
+function showEditModal(sno) {
+  const person = DATA.days[currentDay].people.find(p => String(p.sno) === String(sno));
+  if (!person) {
+    alert("Person not found.");
+    return;
+  }
+  
+  const modal = document.getElementById('editModal');
+  const detailsContainer = document.getElementById('editDetails');
+  const paymentList = document.getElementById('editPaymentList');
+  
+  // Apply negative styling to balance if needed
+  const balanceClass = person.balance < 0 ? "balance-negative" : "";
+  
+  detailsContainer.innerHTML = `
+    <div class="detail-row">
+      <span class="detail-label">S.No:</span>
+      <span class="detail-value">${escapeHtml(person.sno)}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Name:</span>
+      <span class="detail-value">${escapeHtml(person.name)}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Village:</span>
+      <span class="detail-value">${escapeHtml(person.village || 'N/A')}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Date:</span>
+      <span class="detail-value">${escapeHtml(person.date || 'N/A')}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Principal Amount:</span>
+      <span class="detail-value">${money(person.principal)}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Interest Amount:</span>
+      <span class="detail-value">${money(person.interest)}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Total Amount:</span>
+      <span class="detail-value">${money(person.total)}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Given Amount:</span>
+      <span class="detail-value">${money(person.given)}</span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-label">Balance:</span>
+      <span class="detail-value ${balanceClass}"><b>${money(person.balance)}</b></span>
+    </div>
+    <div class="action-buttons">
+      <button class="btn small" data-edit-details="${person.sno}">Edit Details</button>
+      <button class="btn small" data-add-payment="${person.sno}">Add Payment</button>
+    </div>
+  `;
+  
+  // Render payment list
+  if (person.payments && person.payments.length > 0) {
+    paymentList.innerHTML = '<h4>Payment History</h4>';
+    person.payments.forEach((payment, index) => {
+      const paymentItem = document.createElement('div');
+      paymentItem.className = 'edit-payment-item';
+      paymentItem.innerHTML = `
+        <div>
+          <div>${formatDateWithMonthName(payment.date)}</div>
+          <div style="font-size: 12px; color: var(--muted)">${payment.date}</div>
+        </div>
+        <div style="font-weight: bold">${money(payment.amount)}</div>
+        <div class="payment-actions">
+          <button class="btn tiny danger" data-delete-payment="${index}">Delete</button>
+        </div>
+      `;
+      paymentList.appendChild(paymentItem);
+    });
+    
+    // Add event listeners for delete buttons
+    paymentList.querySelectorAll('[data-delete-payment]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const index = parseInt(e.target.getAttribute('data-delete-payment'));
+        deletePayment(person, index);
+      });
+    });
+  } else {
+    paymentList.innerHTML = '<div class="empty">No payments found.</div>';
+  }
+  
+  // Add event listeners for action buttons
+  detailsContainer.querySelector('[data-edit-details]').addEventListener('click', () => {
+    modal.style.display = 'none';
+    editPerson(sno);
+  });
+  
+  detailsContainer.querySelector('[data-add-payment]').addEventListener('click', () => {
+    modal.style.display = 'none';
+    showPaymentModal(sno);
+  });
+  
+  modal.style.display = 'flex';
+}
+
+function deletePayment(person, index) {
+  if (!confirm("Are you sure you want to delete this payment?")) return;
+  
+  const payment = person.payments[index];
+  person.given = to2((person.given || 0) - payment.amount);
+  person.balance = to2((person.total || 0) - (person.given || 0));
+  person.payments.splice(index, 1);
+  
+  saveData(DATA);
+  showEditModal(person.sno); // Refresh the edit modal
+  refreshDay(); // Refresh the main view
+}
+
+function showDateDetails(dateStr) {
+  const modal = document.getElementById('dateDetailsModal');
+  const title = document.getElementById('modalDate');
+  const body = document.getElementById('dateDetailsBody');
+  const totalAmountElem = document.getElementById('modalTotalAmount');
+  const personsCountElem = document.getElementById('modalPersonsCount');
+  
+  title.textContent = formatDateWithMonthName(dateStr);
+  
+  // Find all people who made payments on this date
+  const peopleWithPayments = [];
+  let totalAmount = 0;
+  
+  DATA.days[currentDay].people.forEach(person => {
+    if (person.payments) {
+      person.payments.forEach(payment => {
+        if (formatDateWithMonthName(payment.date) === formatDateWithMonthName(dateStr)) {
+          peopleWithPayments.push({
+            person: person,
+            paymentAmount: payment.amount
+          });
+          totalAmount += Number(payment.amount || 0);
+        }
+      });
+    }
+  });
+  
+  // Sort by S.No (ascending)
+  peopleWithPayments.sort((a, b) => {
+    const snoA = parseInt(a.person.sno) || 0;
+    const snoB = parseInt(b.person.sno) || 0;
+    return snoA - snoB;
+  });
+  
+  // Update summary
+  totalAmountElem.textContent = money(totalAmount);
+  personsCountElem.textContent = peopleWithPayments.length;
+  
+  if (peopleWithPayments.length === 0) {
+    body.innerHTML = `<tr><td colspan="10" class="empty">No payments found for this date.</td></tr>`;
+  } else {
+    body.innerHTML = '';
+    peopleWithPayments.forEach(({person, paymentAmount}) => {
+      // Apply negative styling to balance if needed
+      const balanceClass = person.balance < 0 ? "balance-negative" : "";
+      
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${escapeHtml(person.sno)}</td>
+        <td>${escapeHtml(person.name)}</td>
+        <td>${escapeHtml(person.village || '')}</td>
+        <td>${escapeHtml(person.date || '')}</td>
+        <td class="right">${money(person.principal)}</td>
+        <td class="right">${money(person.interest)}</td>
+        <td class="right">${money(person.total)}</td>
+        <td class="right">${money(paymentAmount)}</td>
+        <td class="right ${balanceClass}"><b>${money(person.balance)}</b></td>
+        <td>
+          <div class="action-buttons">
+            <button class="btn small danger" data-del-from-date="${person.sno}" data-payment-date="${dateStr}">Delete</button>
+          </div>
+        </td>
+      `;
+      body.appendChild(tr);
+    });
+    
+    // Add event listeners for delete buttons
+    body.querySelectorAll('[data-del-from-date]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const sno = e.target.getAttribute('data-del-from-date');
+        const paymentDate = e.target.getAttribute('data-payment-date');
+        deletePaymentFromDate(sno, paymentDate);
+      });
+    });
+  }
+  
+  modal.style.display = 'flex';
+}
+
+function deletePaymentFromDate(sno, dateStr) {
+  if (!confirm("Are you sure you want to delete this payment?")) return;
+  
+  const person = DATA.days[currentDay].people.find(p => String(p.sno) === String(sno));
+  if (!person || !person.payments) return;
+  
+  // Find the payment with the matching date
+  const paymentIndex = person.payments.findIndex(payment => 
+    formatDateWithMonthName(payment.date) === formatDateWithMonthName(dateStr)
+  );
+  
+  if (paymentIndex === -1) return;
+  
+  const payment = person.payments[paymentIndex];
+  person.given = to2((person.given || 0) - payment.amount);
+  person.balance = to2((person.total || 0) - (person.given || 0));
+  person.payments.splice(paymentIndex, 1);
+  
+  saveData(DATA);
+  showDateDetails(dateStr); // Refresh the modal
+  refreshDay(); // Refresh the main view
+}
+
+let DATA = loadData();
+let currentDay = null;
+let showingAdd = false;
+
+function renderDays(){
+  const wrap = document.getElementById("days");
+  wrap.innerHTML = "";
+  DAY_KEYS.forEach(k=>{
+    const count = DATA.days[k].people.length;
+    const card = document.createElement("div");
+    card.className = "day-card";
+    card.innerHTML = `
+      <div class="day-name">${DAY_LABEL[k]}</div>
+      <button class="count-btn" data-day="${k}" title="Open ${DAY_LABEL[k]}">
+        Persons <span class="count">${count}</span>
+      </button>
+      <button class="open-btn" data-open="${k}">Open Day</button>
+    `;
+    wrap.appendChild(card);
+  });
+  wrap.querySelectorAll(".count-btn, .open-btn").forEach(btn=>{
+    btn.addEventListener("click", (e)=>{
+      const day = e.currentTarget.getAttribute("data-day") || e.currentTarget.getAttribute("data-open");
+      openDay(day);
+    });
+  });
+}
+
+function openDay(dayKey){
+  currentDay = dayKey;
+  document.getElementById("dayPanel").style.display = "";
+  document.getElementById("panelDay").textContent = DAY_LABEL[dayKey];
+  document.getElementById("addForm").style.display = "none";
+  showingAdd = false;
+  document.getElementById("searchSno").value = "";
+  document.getElementById("searchName").value = "";
+  refreshDay();
+}
+
+function computeSummary(dayKey){
+  const people = DATA.days[dayKey].people;
+  const persons = people.length;
+  const totals = people.reduce((acc,p)=>{
+    acc.principal += Number(p.principal || 0);
+    acc.interest += Number(p.interest || 0);
+    acc.total += Number(p.total || 0);
+    acc.given += Number(p.given || 0);
+    acc.balance += Number(p.balance || 0);
+    return acc;
+  }, {principal:0, interest:0, total:0, given:0, balance:0});
+  
+  return {
+    persons, 
+    principal: to2(totals.principal),
+    interest: to2(totals.interest),
+    total: to2(totals.total),
+    given: to2(totals.given),
+    balance: to2(totals.balance)
+  };
+}
+
+function renderMetrics(){
+  const sum = computeSummary(currentDay);
+  document.getElementById("mPersons").textContent = String(sum.persons);
+  document.getElementById("mTotal").textContent = money(sum.total);
+  document.getElementById("mPrincipal").textContent = money(sum.principal);
+  document.getElementById("mInterest").textContent = money(sum.interest);
+  document.getElementById("mGiven").textContent = money(sum.given);
+  
+  // Update balance with negative styling if needed
+  const balanceElem = document.getElementById("mBalance");
+  balanceElem.textContent = money(sum.balance);
+  if (sum.balance < 0) {
+    balanceElem.className = "value balance-negative";
+  } else {
+    balanceElem.className = "value";
+  }
+}
+
+function filteredPeople(){
+  const s1 = (document.getElementById("searchSno").value||"").trim().toLowerCase();
+  const s2 = (document.getElementById("searchName").value||"").trim().toLowerCase();
+  const people = DATA.days[currentDay].people.filter(p=>{
+    const ok1 = s1 ? String(p.sno||"").toLowerCase().includes(s1) : true;
+    const ok2 = s2 ? String(p.name||"").toLowerCase().includes(s2) : true;
+    return ok1 && ok2;
+  });
+  
+  // Sort by S.No (ascending)
+  return people.sort((a, b) => {
+    const snoA = parseInt(a.sno) || 0;
+    const snoB = parseInt(b.sno) || 0;
+    return snoA - snoB;
+  });
+}
+
+function renderTable(){
+  const body = document.getElementById("resultsBody");
+  const rows = filteredPeople();
+  if(!rows.length){
+    body.innerHTML = `<tr><td colspan="10" class="empty">No records found.</td></tr>`;
+  } else {
+    body.innerHTML = "";
+    rows.forEach(p=>{
+      const tr = document.createElement("tr");
+      
+      // Apply negative styling to balance if needed
+      const balanceClass = p.balance < 0 ? "balance-negative" : "";
+      
+      tr.innerHTML = `
+        <td>${escapeHtml(p.sno)}</td>
+        <td>${escapeHtml(p.name)}</td>
+        <td>${escapeHtml(p.village||"")}</td>
+        <td>${escapeHtml(p.date||"")}</td>
+        <td class="right">${money(p.principal)}</td>
+        <td class="right">${money(p.interest)}</td>
+        <td class="right">${money(p.total)}</td>
+        <td class="right">${money(p.given)}</td>
+        <td class="right ${balanceClass}"><b>${money(p.balance)}</b></td>
+        <td>
+          <div class="action-buttons">
+            <button class="btn small info" data-edit="${p.sno}">Edit</button>
+            <button class="btn small danger" data-del="${p.sno}">Delete</button>
+          </div>
+        </td>
+      `;
+      body.appendChild(tr);
+    });
+    body.querySelectorAll("[data-del]").forEach(b=>{
+      b.addEventListener("click", ()=>{
+        const sno = b.getAttribute("data-del");
+        deletePerson(sno);
+      });
+    });
+    body.querySelectorAll("[data-edit]").forEach(b=>{
+      b.addEventListener("click", ()=>{
+        const sno = b.getAttribute("data-edit");
+        showEditModal(sno);
+      });
+    });
+  }
+}
+
+function groupPaymentsByDate(dayKey){
+  const map = new Map();
+  DATA.days[dayKey].people.forEach(p => {
+    (p.payments || []).forEach(pay => {
+      const d = formatDateWithMonthName(pay.date);
+      const prev = map.get(d) || { total: 0, persons: new Set() };
+      prev.total = to2(prev.total + Number(pay.amount || 0));
+      prev.persons.add(p.sno); // Use S.No to identify unique persons
+      map.set(d, prev);
+    });
+  });
+  
+  // Convert to array and sort by date
+  const arr = Array.from(map.entries()).map(([date, data]) => ({
+    date,
+    total: data.total,
+    persons: data.persons.size
+  })).sort((a, b) => {
+    const dateA = parseDateWithMonthName(a.date);
+    const dateB = parseDateWithMonthName(b.date);
+    return (dateA || "").localeCompare(dateB || "");
+  });
+  
+  return arr;
+}
+
+function renderPaymentsTable(){
+  const body = document.getElementById("paymentsBody");
+  const paymentsData = groupPaymentsByDate(currentDay);
+  
+  if(!paymentsData.length){
+    body.innerHTML = `<tr><td colspan="4" class="empty">No payments yet.</td></tr>`;
+  } else {
+    body.innerHTML = "";
+    paymentsData.forEach(item => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${escapeHtml(item.date)}</td>
+        <td class="right">${item.persons} person${item.persons !== 1 ? 's' : ''}</td>
+        <td class="right">${money(item.total)}</td>
+        <td>
+          <button class="date-button" data-date="${item.date}">View Details</button>
+        </td>
+      `;
+      body.appendChild(tr);
+    });
+    
+    // Add event listeners to date buttons
+    body.querySelectorAll('.date-button').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const dateStr = e.target.getAttribute('data-date');
+        showDateDetails(dateStr);
+      });
+    });
+  }
+}
+
+function refreshDay(){
+  renderMetrics();
+  renderTable();
+  renderPaymentsTable();
+  renderDays();
+  renderWeeklySummary();
+}
+
+function showAddForm(show, isEditMode = false){
+  showingAdd = !!show;
+  const form = document.getElementById("addForm");
+  form.style.display = show ? "" : "none";
+  
+  // Apply edit mode styling
+  if (show && isEditMode) {
+    form.classList.add("edit-mode");
+    document.getElementById("editModeIndicator").style.display = "flex";
+  } else {
+    form.classList.remove("edit-mode");
+    document.getElementById("editModeIndicator").style.display = "none";
+  }
+  
+  if(show){
+    // Reset the save button to normal mode if not in edit mode
+    const saveBtn = document.getElementById("btnSave");
+    if (!isEditMode) {
+      saveBtn.textContent = "Save";
+      saveBtn.dataset.editMode = "false";
+      delete saveBtn.dataset.originalSno;
+      
+      // Clear form if not in edit mode
+      ["fSno","fName","fVillage","fDate","fPrincipal","fInterest","fTotal","fGiven","fBalance"].forEach(id=>document.getElementById(id).value = "");
+      document.getElementById("fGiven").value = "0";
+    }
+    document.getElementById("fSno").focus();
+  }
+}
+
+function addPersonFromForm(){
+  const sno = document.getElementById("fSno").value.trim();
+  const name = document.getElementById("fName").value.trim();
+  const village = document.getElementById("fVillage").value.trim();
+  const date = document.getElementById("fDate").value.trim();
+  const principal = to2(document.getElementById("fPrincipal").value);
+  const interest = to2(document.getElementById("fInterest").value);
+  const total = to2(principal + interest);
+  const given = to2(document.getElementById("fGiven").value||0);
+  const balance = to2(total - given); // Allow negative values
+
+  if(!sno || !name){
+    alert("S.No and Name are required.");
+    return;
+  }
+
+  const saveBtn = document.getElementById("btnSave");
+  const isEditMode = saveBtn.dataset.editMode === "true";
+  const originalSno = saveBtn.dataset.originalSno;
+
+  if (isEditMode) {
+    // Editing an existing person
+    const personIndex = DATA.days[currentDay].people.findIndex(p => String(p.sno) === String(originalSno));
+    if (personIndex >= 0) {
+      // Preserve payments when editing
+      const payments = DATA.days[currentDay].people[personIndex].payments || [];
+      
+      // Update the person
+      DATA.days[currentDay].people[personIndex] = {
+        sno, name, village, date, principal, interest, total, given, balance, payments
+      };
+      
+      // If S.No changed, we need to update payment references
+      if (originalSno !== sno) {
+        DATA.days[currentDay].people[personIndex].payments = payments.map(p => ({...p}));
+      }
+    }
+  } else {
+    // Adding a new person
+    const exists = DATA.days[currentDay].people.some(p=>String(p.sno)===String(sno));
+    if(exists){
+      alert("This S.No already exists in this day.");
+      return;
+    }
+    
+    const person = {
+      sno, name, village, date, principal, interest, total, given, balance,
+      payments: []
+    };
+    DATA.days[currentDay].people.push(person);
+  }
+
+  saveData(DATA);
+  showAddForm(false);
+  refreshDay();
+}
+
+function deletePerson(sno){
+  if(!confirm("Delete this person and all their payments?")) return;
+  const arr = DATA.days[currentDay].people;
+  const idx = arr.findIndex(p=>String(p.sno)===String(sno));
+  if(idx>=0){
+    arr.splice(idx,1);
+    saveData(DATA);
+  }
+  refreshDay();
+}
+
+// Calculate total when principal or interest changes
+document.getElementById("fPrincipal").addEventListener("input", calculateTotal);
+document.getElementById("fInterest").addEventListener("input", calculateTotal);
+document.getElementById("fGiven").addEventListener("input", calculateBalance);
+
+function calculateTotal() {
+  const principal = to2(document.getElementById("fPrincipal").value || 0);
+  const interest = to2(document.getElementById("fInterest").value || 0);
+  const total = to2(principal + interest);
+  document.getElementById("fTotal").value = total;
+  calculateBalance();
+}
+
+function calculateBalance() {
+  const total = to2(document.getElementById("fTotal").value || 0);
+  const given = to2(document.getElementById("fGiven").value || 0);
+  const balance = to2(total - given);
+  document.getElementById("fBalance").value = balance;
+}
+
+document.getElementById("btnAdd").addEventListener("click", ()=> showAddForm(true));
+document.getElementById("btnCancel").addEventListener("click", ()=> showAddForm(false));
+document.getElementById("btnSave").addEventListener("click", addPersonFromForm);
+
+document.getElementById("btnSearchClear").addEventListener("click", ()=>{
+  document.getElementById("searchSno").value = "";
+  document.getElementById("searchName").value = "";
+  renderTable();
+});
+
+["searchSno","searchName"].forEach(id=>{
+  document.getElementById(id).addEventListener("input", renderTable);
+});
+
+document.getElementById("resetAll").addEventListener("click", ()=>{
+  if(confirm("This will erase ALL saved data for this app. Continue?")){
+    localStorage.removeItem(storeKey);
+    DATA = loadData();
+    currentDay = null;
+    document.getElementById("dayPanel").style.display = "none";
+    renderDays();
+    renderWeeklySummary();
+  }
+});
+
+document.getElementById("exportData").addEventListener("click", exportData);
+
+document.getElementById("importData").addEventListener("click", () => {
+  document.getElementById("importFile").click();
+});
+
+document.getElementById("importFile").addEventListener("change", (e) => {
+  if (e.target.files.length > 0) {
+    importData(e.target.files[0]);
+    e.target.value = '';
+  }
+});
+
+document.getElementById("confirmImport").addEventListener("click", confirmImport);
+document.getElementById("cancelImport").addEventListener("click", cancelImport);
+document.getElementById("closePersonModal").addEventListener("click", () => {
+  document.getElementById("personModal").style.display = "none";
+});
+
+document.getElementById("confirmPayment").addEventListener("click", addPayment);
+document.getElementById("cancelPayment").addEventListener("click", () => {
+  document.getElementById("paymentModal").style.display = "none";
+  currentPaymentPerson = null;
+});
+
+document.getElementById("closeEditModal").addEventListener("click", () => {
+  document.getElementById("editModal").style.display = "none";
+});
+
+document.getElementById("closeDateDetailsModal").addEventListener("click", () => {
+  document.getElementById("dateDetailsModal").style.display = "none";
+});
+
+function escapeHtml(s){
+  return String(s??"").replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+}
+
+renderDays();
+renderWeeklySummary();
+</script>
+</body>
+</html>
